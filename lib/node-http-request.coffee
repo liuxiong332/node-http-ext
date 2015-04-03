@@ -57,6 +57,18 @@ class HttpRequest
     # remove headers with undefined keys and values
     for headerName, headerValue of headers
       delete headers[headerName] unless headerValue?
+    if isHttps
+      request = https.request requestOpts, requestResponse
+    else
+      request = http.request requestOpts, requestResponse
+
+    if options.timeout?
+      request.setTimeout options.timeout, ->
+        request.abort()
+
+    request.on 'error', callback
+    request.write body if body?
+    request.end()
 
 exports.get = (url, options = {}, callback) ->
   if typeof options is 'function'
