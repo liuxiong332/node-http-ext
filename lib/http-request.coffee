@@ -15,28 +15,31 @@ query = require 'querystring'
 class HttpRequest
   constructor: (options, callback) ->
     @callback = callback
+    require('util').log @callback
     @processOpts options
     @sendRequest()
 
   sendRequest: ->
-    requestResponse = (res) ->
-      chunks = [], isEnd = false
+    requestResponse = (res) =>
+      chunks = []
+      isEnd = false
       res.on 'data', (chunk) ->
         chunks.push chunk
 
       res.on 'end', (err) =>
+        require('util').log 'end request'
         isEnd = true
-        if res.headers.location and @allowRedirects
+        require('util').log res.headers.location
+        if res.headers?.location and @allowRedirects
           if @redirectCount++ < @maxRedirects
             @processUrl(res.headers.location) and @sendRequest()
           else
-            return @callback? new Error("Too many redirects (>#{@maxRedirects})")
+            @callback? new Error("Too many redirects (>#{@maxRedirects})")
         else
           responseBody = Buffer.concat chunks
-          @callback? null, {headers: res.headers, statusCode: res.statusCode,
-            body: responseBody.toString('utf8')}
+          @callback? null, {res, body: responseBody.toString('utf8')}
 
-      res.on 'close', ->
+      res.on 'close', =>
         @callback? new Error('Request aborted!') unless isEnd
 
     if @isHttps
@@ -53,19 +56,20 @@ class HttpRequest
       err = new Error('request timeout') if requestTimeout
       @callback? err
 
-    request.write body if body?
+    request.write @body if @body?
     request.end()
 
-  processUrl: (url) ->
+  processUrl: (requestUrl) ->
     if @proxy?
-      [port, host, path] = [@proxy.port, @proxy.host, url]
+      [port, host, path] = [@proxy.port, @proxy.host, requestUrl]
       @isHttps = true if @proxy.protocol is 'https'
     else
-      reqUrl = url.parse url
+      reqUrl = url.parse requestUrl
       @isHttps = reqUrl.protocol is 'https:'
       [host, path] = [reqUrl.hostname, reqUrl.path]
       port = reqUrl.port ? if @isHttps then 443 else 80
     _.extend @requestOpts, {port, host, path}
+    require('util').log {port, host, path}
 
   processOpts: (options) ->
     @allowRedirects = options.allowRedirects isnt false
@@ -80,22 +84,22 @@ class HttpRequest
       if options.method is 'GET'
         path += "?#{params}"
       else
-        body = new Buffer params, 'utf8'
+        @body = new Buffer params, 'utf8'
         contentType = 'application/x-www-form-urlencoded; charset=UTF-8'
 
     if options.json
-      body = new Buffer JSON.stringify(options.json), 'utf8'
+      @body = new Buffer JSON.stringify(options.json), 'utf8'
       contentType = 'application/json'
 
     if options.body
-      body = new Buffer options.body, 'utf8'
+      @body = new Buffer options.body, 'utf8'
       contentType = null
 
     @requestOpts = requestOpts = {method: options.method}
     @processUrl options.url
 
     requestOpts.headers = headers = {}
-    headers['Content-Length'] = body.length if body?
+    headers['Content-Length'] = @body.length if @body?
     headers['Content-Type'] = contentType if contentType?
     headers['Cookie'] = options.cookies.join "; " if options.cookies?
     _.extend headers, options.headers
@@ -107,6 +111,7 @@ class HttpRequest
     # remove headers with undefined keys and values
     for headerName, headerValue of headers
       delete headers[headerName] unless headerValue?
+    require('util').log JSON.stringify(@requestOpts, null, 2)
 
 exports.get = (url, options = {}, callback) ->
   if typeof options is 'function'
@@ -115,7 +120,7 @@ exports.get = (url, options = {}, callback) ->
   options.url = url
   options.method = 'GET'
 
-  doRequest options, callback
+  new HttpRequest options, callback
 
 exports.post = (url, options = {}, callback) ->
   if typeof options is 'function'
@@ -125,4 +130,4 @@ exports.post = (url, options = {}, callback) ->
   options.url = url
   options.method = 'POST'
 
-  doRequest options, callback
+  new HttpRequest options, callback
