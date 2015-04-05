@@ -116,11 +116,7 @@ class HttpRequest
     @sendRequest()
 
   sendRequest: ->
-    if @isHttps
-      request = https.request @requestOpts, @requestResponse
-    else
-      request = http.request @requestOpts, @requestResponse
-
+    request = new http.ClientRequest @requestOpts, @requestResponse
     @listenRequestEvent request
     request.write @body if @body?
     request.end()
