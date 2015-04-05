@@ -64,6 +64,7 @@ class HttpParser extends Mixin
 
     @requestOpts = requestOpts = {method: options.method}
     @processUrl options.url
+    requestOpts._defaultAgent = https.globalAgent if @isHttps
 
     if options.parameters
       params = query.stringify options.parameters

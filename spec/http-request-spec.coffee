@@ -71,9 +71,17 @@ describe 'http ext', ->
         res.on 'end', -> done()
 
   describe 'HttpStreamRequest', ->
+
     it 'get index', (done) ->
       reqUrl = 'http://localhost:8080/'
       req = request.get reqUrl, {requestMode: 'stream'}, (err, {body}) ->
         body.should.eql 'Index'
         done()
       req.end()
+
+    it 'post with data', (done) ->
+      reqUrl = 'http://localhost:8080/echo'
+      req = request.post reqUrl, {requestMode: 'stream'}, (res, {body}) ->
+        JSON.parse(body).should.eql {opt: 'hello'}
+        done()
+      req.end JSON.stringify({opt: 'hello'})
