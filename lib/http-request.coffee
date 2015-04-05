@@ -11,15 +11,14 @@ https = require 'https'
 url = require 'url'
 _ = require 'underscore'
 query = require 'querystring'
+Mixin = require 'mixto'
 
-class HttpRequest
+class HttpParser extends Mixin
   constructor: (options, callback) ->
     @callback = callback
-    @processOpts options
-    @sendRequest()
 
   requestResponse: (res) =>
-    return @callback? res if @responseModel is 'stream'
+    return @callback? res if @responseMode is 'stream'
     chunks = []
     isEnd = false
 
@@ -36,29 +35,11 @@ class HttpRequest
           @callback? new Error("Too many redirects (>#{@maxRedirects})")
       else
         responseBody = Buffer.concat chunks
+
         @callback? null, {res, body: responseBody.toString('utf8')}
 
     res.on 'close', =>
       @callback? new Error('Request aborted!') unless isEnd
-
-  sendRequest: ->
-    if @isHttps
-      request = https.request @requestOpts, @requestResponse
-    else
-      request = http.request @requestOpts, @requestResponse
-
-    requestTimeout = false
-    if @requestOpts.timeout?
-      request.setTimeout options.timeout, ->
-        requestTimeout = true
-        request.abort()
-
-    request.on 'error', (err) ->
-      err = new Error('request timeout') if requestTimeout
-      @callback? err
-
-    request.write @body if @body?
-    request.end()
 
   processUrl: (requestUrl) ->
     @url = requestUrl
@@ -73,7 +54,7 @@ class HttpRequest
     _.extend @requestOpts, {port, host, path}
 
   processOpts: (options) ->
-    @responseModel = options.responseModel ? 'normal'
+    @responseMode = options.responseMode ? 'normal'
     @allowRedirects = options.allowRedirects isnt false
     if @allowRedirects
       @maxRedirects = options.maxRedirects ? 10
@@ -114,6 +95,44 @@ class HttpRequest
     for headerName, headerValue of headers
       delete headers[headerName] unless headerValue?
 
+  listenRequestEvent: (request) ->
+    requestTimeout = false
+    if @requestOpts.timeout?
+      request.setTimeout @requestOpts.timeout, ->
+        requestTimeout = true
+        request.abort()
+
+    request.on 'error', (err) ->
+      err = new Error('request timeout') if requestTimeout
+      @callback? err
+
+class HttpRequest
+  HttpParser.includeInto this
+
+  constructor: (options, callback) ->
+    HttpParser.apply this, arguments
+    @processOpts options
+    @sendRequest()
+
+  sendRequest: ->
+    if @isHttps
+      request = https.request @requestOpts, @requestResponse
+    else
+      request = http.request @requestOpts, @requestResponse
+
+    @listenRequestEvent request
+    request.write @body if @body?
+    request.end()
+
+class HttpStreamRequest extends http.ClientRequest
+  HttpParser.includeInto this
+
+  constructor: (options, callback) ->
+    HttpParser.apply this, arguments
+    @processOpts options
+    super @requestOpts, @requestResponse
+    @listenRequestEvent this
+
 ['get', 'post', 'delete', 'put'].forEach (method) ->
   exports[method] = (url, options = {}, callback) ->
     if typeof options is 'function'
@@ -121,5 +140,7 @@ class HttpRequest
       options = {}
     options.url = url
     options.method = method.toUpperCase()
-
-    new HttpRequest options, callback
+    if options.requestMode is 'stream'
+      new HttpStreamRequest options, callback
+    else
+      new HttpRequest options, callback
