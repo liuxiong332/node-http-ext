@@ -18,32 +18,35 @@ class HttpRequest
     @processOpts options
     @sendRequest()
 
-  sendRequest: ->
-    requestResponse = (res) =>
-      chunks = []
-      isEnd = false
-      res.on 'data', (chunk) ->
-        chunks.push chunk
+  requestResponse: (res) =>
+    chunks = []
+    isEnd = false
 
-      res.on 'end', (err) =>
-        isEnd = true
-        if res.headers?.location and @allowRedirects
-          if @redirectCount++ < @maxRedirects
-            @processUrl(res.headers.location) and @sendRequest()
-          else
-            @callback? new Error("Too many redirects (>#{@maxRedirects})")
+    res.on 'data', (chunk) ->
+      chunks.push chunk
+
+    res.on 'end', (err) =>
+      isEnd = true
+      if res.headers.location and @allowRedirects
+        if @redirectCount++ < @maxRedirects
+          @processUrl url.resolve(@url, res.headers.location)
+          @sendRequest()
         else
-          responseBody = Buffer.concat chunks
-          @callback? null, {res, body: responseBody.toString('utf8')}
+          @callback? new Error("Too many redirects (>#{@maxRedirects})")
+      else
+        responseBody = Buffer.concat chunks
+        @callback? null, {res, body: responseBody.toString('utf8')}
 
-      res.on 'close', =>
-        @callback? new Error('Request aborted!') unless isEnd
+    res.on 'close', =>
+      @callback? new Error('Request aborted!') unless isEnd
 
+  sendRequest: ->
     if @isHttps
-      request = https.request @requestOpts, requestResponse
+      request = https.request @requestOpts, @requestResponse
     else
-      request = http.request @requestOpts, requestResponse
+      request = http.request @requestOpts, @requestResponse
 
+    requestTimeout = false
     if @requestOpts.timeout?
       request.setTimeout options.timeout, ->
         requestTimeout = true
@@ -57,6 +60,7 @@ class HttpRequest
     request.end()
 
   processUrl: (requestUrl) ->
+    @url = requestUrl
     if @proxy?
       [port, host, path] = [@proxy.port, @proxy.host, requestUrl]
       @isHttps = true if @proxy.protocol is 'https'

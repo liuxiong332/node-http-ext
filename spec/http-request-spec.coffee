@@ -20,6 +20,7 @@ describe 'nodeHttpRequest', ->
     app.get '/', (req, res) -> res.send 'Index'
     app.get '/parameter', (req, res) ->
       res.send JSON.stringify(req.query)
+    app.get '/redirect', (req, res) -> res.redirect '/'
     app.post '/echo', (req, res) ->
       util.log req.body
       res.send req.body
@@ -56,4 +57,9 @@ describe 'nodeHttpRequest', ->
     body = JSON.stringify {opt: 'hello'}
     request.post reqUrl, {body}, (err, {body}) ->
       JSON.parse(body).should.eql {opt: 'hello'}
+      done()
+
+  it 'get with redirect', (done) ->
+    request.get 'http://localhost:8080/redirect', (err, {body}) ->
+      body.should.eql 'Index'
       done()
