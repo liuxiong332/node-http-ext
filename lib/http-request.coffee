@@ -19,6 +19,8 @@ class HttpRequest
     @sendRequest()
 
   requestResponse: (res) =>
+    require('util').log @responseModel
+    return @callback? res if @responseModel is 'stream'
     chunks = []
     isEnd = false
 
@@ -72,6 +74,7 @@ class HttpRequest
     _.extend @requestOpts, {port, host, path}
 
   processOpts: (options) ->
+    @responseModel = options.responseModel ? 'normal'
     @allowRedirects = options.allowRedirects isnt false
     if @allowRedirects
       @maxRedirects = options.maxRedirects ? 10

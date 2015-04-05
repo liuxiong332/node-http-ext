@@ -63,3 +63,8 @@ describe 'nodeHttpRequest', ->
     request.get 'http://localhost:8080/redirect', (err, {body}) ->
       body.should.eql 'Index'
       done()
+
+  it 'get with responseModel is stream', (done) ->
+    request.get 'http://localhost:8080/', {responseModel: 'stream'}, (res) ->
+      res.on 'data', (data) -> data.toString('utf8').should.eql 'Index'
+      res.on 'end', -> done()
