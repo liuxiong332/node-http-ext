@@ -19,7 +19,6 @@ class HttpRequest
     @sendRequest()
 
   requestResponse: (res) =>
-    require('util').log @responseModel
     return @callback? res if @responseModel is 'stream'
     chunks = []
     isEnd = false
@@ -115,21 +114,12 @@ class HttpRequest
     for headerName, headerValue of headers
       delete headers[headerName] unless headerValue?
 
-exports.get = (url, options = {}, callback) ->
-  if typeof options is 'function'
-    callback = options
-    options = {}
-  options.url = url
-  options.method = 'GET'
+['get', 'post', 'delete', 'put'].forEach (method) ->
+  exports[method] = (url, options = {}, callback) ->
+    if typeof options is 'function'
+      callback = options
+      options = {}
+    options.url = url
+    options.method = method.toUpperCase()
 
-  new HttpRequest options, callback
-
-exports.post = (url, options = {}, callback) ->
-  if typeof options is 'function'
-    callback = options
-    options = {}
-
-  options.url = url
-  options.method = 'POST'
-
-  new HttpRequest options, callback
+    new HttpRequest options, callback
