@@ -4,17 +4,56 @@ express = require 'express'
 http = require 'http'
 assert = require 'should'
 util = require 'util'
+bodyParser = require 'body-parser'
 
 describe 'nodeHttpRequest', ->
   server = null
   beforeEach (done) ->
     app = express()
+    app.use (req, res, next) ->
+      req.headers['content-type'] ?= 'text/plain'
+      next()
+    app.use bodyParser.urlencoded extended: false
+    app.use bodyParser.text()
+    app.use bodyParser.json()
+
+    app.get '/', (req, res) -> res.send 'Index'
+    app.get '/parameter', (req, res) ->
+      res.send JSON.stringify(req.query)
+    app.post '/echo', (req, res) ->
+      util.log req.body
+      res.send req.body
     server = http.createServer(app).listen 8080, -> done()
 
   afterEach (done) ->
     server.close -> done()
 
-  it 'should be awesome', (done) ->
-    request.get 'http://localhost:8080', (err, {res, body}) ->
-      util.log res.statusCode
+  it 'should request index content', (done) ->
+    request.get 'http://localhost:8080/', (err, {res, body}) ->
+      body.should.eql 'Index'
+      done()
+
+  it 'get with parameter', (done) ->
+    reqUrl = 'http://localhost:8080/parameter'
+    request.get reqUrl, {parameters: {opt: 'hello'}}, (err, {body}) ->
+      JSON.parse(body).should.eql {opt: 'hello'}
+      done()
+
+  it 'post with parameter', (done) ->
+    reqUrl = 'http://localhost:8080/echo'
+    request.post reqUrl, {parameters: {opt: 'hello'}}, (err, {body}) ->
+      JSON.parse(body).should.eql {opt: 'hello'}
+      done()
+
+  it 'post with json', (done) ->
+    reqUrl = 'http://localhost:8080/echo'
+    request.post reqUrl, {json: {opt: 'hello'}}, (err, {body}) ->
+      JSON.parse(body).should.eql {opt: 'hello'}
+      done()
+
+  it 'post with body', (done) ->
+    reqUrl = 'http://localhost:8080/echo'
+    body = JSON.stringify {opt: 'hello'}
+    request.post reqUrl, {body}, (err, {body}) ->
+      JSON.parse(body).should.eql {opt: 'hello'}
       done()

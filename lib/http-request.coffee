@@ -15,7 +15,6 @@ query = require 'querystring'
 class HttpRequest
   constructor: (options, callback) ->
     @callback = callback
-    require('util').log @callback
     @processOpts options
     @sendRequest()
 
@@ -27,9 +26,7 @@ class HttpRequest
         chunks.push chunk
 
       res.on 'end', (err) =>
-        require('util').log 'end request'
         isEnd = true
-        require('util').log res.headers.location
         if res.headers?.location and @allowRedirects
           if @redirectCount++ < @maxRedirects
             @processUrl(res.headers.location) and @sendRequest()
@@ -69,7 +66,6 @@ class HttpRequest
       [host, path] = [reqUrl.hostname, reqUrl.path]
       port = reqUrl.port ? if @isHttps then 443 else 80
     _.extend @requestOpts, {port, host, path}
-    require('util').log {port, host, path}
 
   processOpts: (options) ->
     @allowRedirects = options.allowRedirects isnt false
@@ -79,10 +75,13 @@ class HttpRequest
 
     @proxy = options.proxy
 
+    @requestOpts = requestOpts = {method: options.method}
+    @processUrl options.url
+
     if options.parameters
       params = query.stringify options.parameters
       if options.method is 'GET'
-        path += "?#{params}"
+        @requestOpts.path += "?#{params}"
       else
         @body = new Buffer params, 'utf8'
         contentType = 'application/x-www-form-urlencoded; charset=UTF-8'
@@ -94,9 +93,6 @@ class HttpRequest
     if options.body
       @body = new Buffer options.body, 'utf8'
       contentType = null
-
-    @requestOpts = requestOpts = {method: options.method}
-    @processUrl options.url
 
     requestOpts.headers = headers = {}
     headers['Content-Length'] = @body.length if @body?
@@ -111,7 +107,6 @@ class HttpRequest
     # remove headers with undefined keys and values
     for headerName, headerValue of headers
       delete headers[headerName] unless headerValue?
-    require('util').log JSON.stringify(@requestOpts, null, 2)
 
 exports.get = (url, options = {}, callback) ->
   if typeof options is 'function'
