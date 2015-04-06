@@ -6,24 +6,23 @@ class FilterManager
     @_handlers = []
     @use filters...
 
-  _applyFilter: (method, defFilter) ->
-    args = Array::slice.call arguments, 2
+  _applyFilter: (method, defFilter, arg) ->
     handlers = @_handlers
     length = handlers.length
     curIndex = 0
     next = ->
       ++curIndex while curIndex < length and not handlers[curIndex][method]?
       if curIndex >= length
-        return defFilter?[method].apply defFilter, args
+        return defFilter? arg
       h = handlers[curIndex++]
-      h[method].apply h, args.concat(next)
+      h[method].call h, arg, next
     next()
 
-  applyRequestFilter: (defFilter, req) ->
+  applyRequestFilter: (req, defFilter) ->
     @_applyFilter 'filterRequest', defFilter, req
 
-  applyResponseFilter: (defFilter, req, res) ->
-    @_applyFilter 'filterResponse', defFilter, req, res
+  applyResponseFilter: (res, defFilter) ->
+    @_applyFilter 'filterResponse', defFilter, res
 
   use: (filters...) ->
     @_handlers = @_handlers.concat filters

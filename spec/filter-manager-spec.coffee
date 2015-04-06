@@ -9,20 +9,17 @@ describe 'filter manager', ->
   it 'should use and apply filter handler', ->
     filter =
       filterRequest: (req, next) -> next()
-      filterResponse: (req, res, next) -> next()
+      filterResponse: (res, next) -> next()
     sinon.spy filter, 'filterRequest'
     sinon.spy filter, 'filterResponse'
 
-    defFilter =
-      filterRequest: ->
-      filterResponse: ->
-    sinon.spy defFilter, 'filterRequest'
-    sinon.spy defFilter, 'filterResponse'
+    defReqFilter = sinon.spy()
+    defResFilter = sinon.spy()
 
-    new FilterManager(filter).applyRequestFilter defFilter, 'req'
+    new FilterManager(filter).applyRequestFilter 'req', defReqFilter
     filter.filterRequest.calledWith('req').should.true
-    defFilter.filterRequest.calledWith('req').should.true
+    defReqFilter.calledWith('req').should.true
 
-    new FilterManager(filter).applyResponseFilter defFilter, 'req', 'res'
-    filter.filterResponse.calledWith('req', 'res').should.true
-    defFilter.filterResponse.calledWith('req', 'res').should.true
+    new FilterManager(filter).applyResponseFilter 'res', defResFilter
+    filter.filterResponse.calledWith('res').should.true
+    defResFilter.calledWith('res').should.true

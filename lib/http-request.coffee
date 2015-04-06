@@ -12,13 +12,18 @@ url = require 'url'
 _ = require 'underscore'
 query = require 'querystring'
 Mixin = require 'mixto'
-exports.FilterManager = require 'filter-manager'
+exports.FilterManager = require './filter-manager'
+
+exports.globalFilterManager = globalFilterManager = new exports.FilterManager
 
 class HttpParser extends Mixin
   constructor: (options, callback) ->
     @callback = callback
 
   requestResponse: (res) =>
+    @filterResponse res, => @operateResponse res
+
+  operateResponse: (res) ->
     return @callback? res if @responseMode is 'stream'
     chunks = []
     isEnd = false
@@ -93,9 +98,16 @@ class HttpParser extends Mixin
       requestOpts.rejectUnauthorized = options.rejectUnauthorized
     requestOpts.agent = options.agent if options.agent?
 
+    @filterManager = options.filterManager ? globalFilterManager
     # remove headers with undefined keys and values
     for headerName, headerValue of headers
       delete headers[headerName] unless headerValue?
+
+  filterRequest: (request, callback) ->
+    @filterManager.applyRequestFilter request, callback
+
+  filterResponse: (response, callback) ->
+    @filterManager.applyResponseFilter response, callback
 
   listenRequestEvent: (request) ->
     requestTimeout = false
@@ -119,8 +131,9 @@ class HttpRequest
   sendRequest: ->
     request = new http.ClientRequest @requestOpts, @requestResponse
     @listenRequestEvent request
-    request.write @body if @body?
-    request.end()
+    @filterRequest request, =>
+      request.write @body if @body?
+      request.end()
 
 class HttpStreamRequest extends http.ClientRequest
   HttpParser.includeInto this
@@ -130,6 +143,7 @@ class HttpStreamRequest extends http.ClientRequest
     @processOpts options
     super @requestOpts, @requestResponse
     @listenRequestEvent this
+    @filterRequest this
 
 ['get', 'post', 'delete', 'put'].forEach (method) ->
   exports[method] = (url, options = {}, callback) ->
