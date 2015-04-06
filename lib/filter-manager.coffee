@@ -25,10 +25,10 @@ class FilterManager extends Mixin
     next()
 
   applyRequestFilter: (req) ->
-    @_applyFilter 'filterReq', req
+    @_applyFilter 'filterRequest', req
 
   applyResponseFilter: (req, res) ->
-    @_applyFilter 'filterRes', req, res
+    @_applyFilter 'filterResponse', req, res
 
   @_handlers = []
   @use: (handler) ->
