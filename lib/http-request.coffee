@@ -21,9 +21,9 @@ class HttpParser extends Mixin
     @callback = callback
 
   requestResponse: (res) =>
-    @filterResponse res, => @operateResponse res
+    @filterResponse res, @operateResponse.bind(this)
 
-  operateResponse: (res) ->
+  operateResponse: (res, resError) ->
     return @callback? res if @responseMode is 'stream'
     chunks = []
     isEnd = false
@@ -33,7 +33,11 @@ class HttpParser extends Mixin
 
     res.on 'end', (err) =>
       isEnd = true
-      if res.headers.location and @allowRedirects
+      if resError?
+        @callback? resError
+      else if res.retry is true
+        @sendRequest()
+      else if res.headers.location and @allowRedirects
         if @redirectCount++ < @maxRedirects
           @processUrl url.resolve(@url, res.headers.location)
           @sendRequest()
@@ -41,7 +45,6 @@ class HttpParser extends Mixin
           @callback? new Error("Too many redirects (>#{@maxRedirects})")
       else
         responseBody = Buffer.concat chunks
-
         @callback? null, {res, body: responseBody.toString('utf8')}
 
     res.on 'close', =>
@@ -98,7 +101,9 @@ class HttpParser extends Mixin
       requestOpts.rejectUnauthorized = options.rejectUnauthorized
     requestOpts.agent = options.agent if options.agent?
 
-    @filterManager = options.filterManager ? globalFilterManager
+    @filterManager = options.filter ? globalFilterManager
+    @filterManager.applyOptionFilter options, requestOpts
+
     # remove headers with undefined keys and values
     for headerName, headerValue of headers
       delete headers[headerName] unless headerValue?

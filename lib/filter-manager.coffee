@@ -16,15 +16,18 @@ class FilterManager
       if curIndex >= length
         return defFilter()
       h = handlers[curIndex++]
-      h[method].apply h, args.concat(next)
+      try
+        h[method].apply h, args.concat(next)
+      catch err
+        defFilter err
     next()
 
   applyRequestFilter: (req, defFilter) ->
-    filter = -> defFilter(req) if defFilter?
+    filter = (err) -> defFilter(req, err) if defFilter?
     @_applyFilter 'filterRequest', filter, req
 
   applyResponseFilter: (res, defFilter) ->
-    filter = -> defFilter(res) if defFilter?
+    filter = (err) -> defFilter(res, err) if defFilter?
     @_applyFilter 'filterResponse', filter, res
 
   applyOptionFilter: (option, requestOpts, defFilter) ->
