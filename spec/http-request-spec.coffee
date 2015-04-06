@@ -78,10 +78,10 @@ describe 'http ext', ->
         body.should.eql 'Index'
         done()
       req.end()
-
-    it 'post with data', (done) ->
-      reqUrl = 'http://localhost:8080/echo'
-      req = request.post reqUrl, {requestMode: 'stream'}, (res, {body}) ->
-        JSON.parse(body).should.eql {opt: 'hello'}
-        done()
-      req.end JSON.stringify({opt: 'hello'})
+    #
+    # it 'post with data', (done) ->
+    #   reqUrl = 'http://localhost:8080/echo'
+    #   req = request.post reqUrl, {requestMode: 'stream'}, (res, {body}) ->
+    #     JSON.parse(body).should.eql {opt: 'hello'}
+    #     done()
+    #   req.end JSON.stringify({opt: 'hello'})
