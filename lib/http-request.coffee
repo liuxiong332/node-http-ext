@@ -12,6 +12,7 @@ url = require 'url'
 _ = require 'underscore'
 query = require 'querystring'
 Mixin = require 'mixto'
+{PassThrough} = require 'stream'
 {RetryError} = require './http-error'
 exports.FilterManager = require './filter-manager'
 
@@ -22,6 +23,10 @@ class HttpParser extends Mixin
     @callback = callback
 
   requestResponse: (res) =>
+    res.client = this
+    res.stream = new PassThrough
+    res.pipe res.stream
+
     @filterResponse res, @operateResponse.bind(this)
 
   operateResponse: (res, resError) ->
@@ -29,10 +34,10 @@ class HttpParser extends Mixin
     chunks = []
     isEnd = false
 
-    res.on 'data', (chunk) ->
+    res.stream.on 'data', (chunk) ->
       chunks.push chunk
 
-    res.on 'end', (err) =>
+    res.stream.on 'end', (err) =>
       isEnd = true
       if resError?
         if resError instanceof RetryError
@@ -137,10 +142,15 @@ class HttpRequest
 
   sendRequest: ->
     request = new http.ClientRequest @requestOpts, @requestResponse
+    request.client = this
+    request.stream = new PassThrough
+    request.stream.write @body if @body?
+
     @listenRequestEvent request
     @filterRequest request, =>
-      request.write @body if @body?
-      request.end()
+      request.stream.pipe request
+      # request.write @body if @body?
+      # request.end()
 
 class HttpStreamRequest extends http.ClientRequest
   HttpParser.includeInto this
