@@ -19,11 +19,10 @@ describe 'filter manager', ->
     sinon.spy defFilter, 'filterRequest'
     sinon.spy defFilter, 'filterResponse'
 
-    FilterManager.use filter
-    new FilterManager(defFilter).applyRequestFilter 'req'
+    new FilterManager(filter).applyRequestFilter defFilter, 'req'
     filter.filterRequest.calledWith('req').should.true
     defFilter.filterRequest.calledWith('req').should.true
 
-    new FilterManager(defFilter).applyResponseFilter 'req', 'res'
+    new FilterManager(filter).applyResponseFilter defFilter, 'req', 'res'
     filter.filterResponse.calledWith('req', 'res').should.true
     defFilter.filterResponse.calledWith('req', 'res').should.true

@@ -12,6 +12,7 @@ url = require 'url'
 _ = require 'underscore'
 query = require 'querystring'
 Mixin = require 'mixto'
+exports.FilterManager = require 'filter-manager'
 
 class HttpParser extends Mixin
   constructor: (options, callback) ->

@@ -1,38 +1,29 @@
-Mixin = require 'mixto'
 _ = require 'underscore'
 
 module.exports =
-class FilterManager extends Mixin
-  constructor: (handler) ->
-    @_defFilter = handler
+class FilterManager
+  constructor: (filters...) ->
+    @_handlers = []
+    @use filters...
 
-  defaultFilter: (handler) ->
-    @_defFilter = handler
-
-  _applyFilter: (method) ->
-    args = Array::slice.call arguments, 1
-
-    handlers = FilterManager._handlers
-    defFilter = @_defFilter
+  _applyFilter: (method, defFilter) ->
+    args = Array::slice.call arguments, 2
+    handlers = @_handlers
     length = handlers.length
     curIndex = 0
     next = ->
       ++curIndex while curIndex < length and not handlers[curIndex][method]?
       if curIndex >= length
-        return defFilter[method].apply defFilter, args
+        return defFilter?[method].apply defFilter, args
       h = handlers[curIndex++]
       h[method].apply h, args.concat(next)
     next()
 
-  applyRequestFilter: (req) ->
-    @_applyFilter 'filterRequest', req
+  applyRequestFilter: (defFilter, req) ->
+    @_applyFilter 'filterRequest', defFilter, req
 
-  applyResponseFilter: (req, res) ->
-    @_applyFilter 'filterResponse', req, res
+  applyResponseFilter: (defFilter, req, res) ->
+    @_applyFilter 'filterResponse', defFilter, req, res
 
-  @_handlers = []
-  @use: (handler) ->
-    if _.isArray handler
-      @_handlers = @_handlers.concat handler
-    else
-      @_handlers.push handler
+  use: (filters...) ->
+    @_handlers = @_handlers.concat filters
