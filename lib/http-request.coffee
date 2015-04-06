@@ -12,6 +12,7 @@ url = require 'url'
 _ = require 'underscore'
 query = require 'querystring'
 Mixin = require 'mixto'
+{RetryError} = require './http-error'
 exports.FilterManager = require './filter-manager'
 
 exports.globalFilterManager = globalFilterManager = new exports.FilterManager
@@ -34,9 +35,10 @@ class HttpParser extends Mixin
     res.on 'end', (err) =>
       isEnd = true
       if resError?
-        @callback? resError
-      else if res.retry is true
-        @sendRequest()
+        if resError instanceof RetryError
+          @sendRequest()
+        else
+          @callback? resError
       else if res.headers.location and @allowRedirects
         if @redirectCount++ < @maxRedirects
           @processUrl url.resolve(@url, res.headers.location)
