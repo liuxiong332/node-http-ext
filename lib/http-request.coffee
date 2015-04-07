@@ -57,7 +57,7 @@ class HttpParser extends Mixin
       responseBody = Buffer.concat chunks
       @callback? null, {res, body: responseBody.toString('utf8')}
 
-  processUrl: (requestUrl) ->
+  parseUrl: (requestUrl) ->
     @url = requestUrl
     if @proxy?
       [port, host, path] = [@proxy.port, @proxy.host, requestUrl]
@@ -81,7 +81,7 @@ class HttpParser extends Mixin
     @proxy = options.proxy
 
     @requestOpts = requestOpts = {method: options.method}
-    @processUrl options.url
+    @parseUrl options.url
     requestOpts._defaultAgent = https.globalAgent if @isHttps
 
     if options.parameters
@@ -154,8 +154,11 @@ class HttpRequest
 
     # request Mode is normal, write body into stream
     unless @requestMode is 'stream'
-      request.stream.write @body if @body?
-      request.stream.end()
+      if @bodyStream?
+        @bodyStream.pipe request.stream
+      else
+        request.stream.write @body if @body?
+        request.stream.end()
 
     @listenRequestEvent request
     @filterRequest request, ->
