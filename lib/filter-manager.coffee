@@ -1,10 +1,10 @@
 _ = require 'underscore'
 
-module.exports =
-class FilterManager
-  constructor: (filters...) ->
-    @_handlers = []
-    @use filters...
+class FilterWorker
+  constructor: (filterConstructors) ->
+    @_handlers = filterConstructors.map (constructor) -> new constructor
+
+  getFilters: -> @_handlers
 
   _applyFilter: (method, defFilter) ->
     args = Array::slice.call arguments, 2
@@ -33,6 +33,15 @@ class FilterManager
   applyOptionFilter: (option, requestOpts, defFilter) ->
     filter = -> defFilter(option, requestOpts) if defFilter?
     @_applyFilter 'filterOption', filter, option, requestOpts
+
+module.exports =
+class FilterManager
+  constructor: (filters...) ->
+    @_handlers = []
+    @use filters...
+
+  getFilterWorker: ->
+    new FilterWorker @_handlers
 
   use: (filters...) ->
     @_handlers = @_handlers.concat filters

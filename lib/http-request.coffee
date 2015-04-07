@@ -14,9 +14,11 @@ query = require 'querystring'
 Mixin = require 'mixto'
 {PassThrough} = require 'stream'
 {RetryError} = require './http-error'
+RedirectFilter = require './redirect-filter'
 exports.FilterManager = require './filter-manager'
 
-exports.globalFilterManager = globalFilterManager = new exports.FilterManager
+exports.globalFilterManager = globalFilterManager =
+  new exports.FilterManager RedirectFilter
 
 class HttpParser extends Mixin
   constructor: (options, callback) ->
@@ -28,7 +30,7 @@ class HttpParser extends Mixin
     res.on 'close', => @callback? new Error('Request aborted!') unless isEnd
     res.on 'error', (err) => @callback? err
 
-    res.client = this
+    res.getClient = => this
     res.stream = new PassThrough
     res.getOutStream = -> this.stream
     res.pipe res.stream
@@ -70,13 +72,8 @@ class HttpParser extends Mixin
     _.extend @requestOpts, {port, host, path}
 
   processOpts: (options) ->
-    @responseMode = options.responseMode ? 'normal'
+    @responseMode = options.responseMode
     @requestMode = options.requestMode
-
-    @allowRedirects = options.allowRedirects isnt false
-    if @allowRedirects
-      @maxRedirects = options.maxRedirects ? 10
-      @redirectCount = 0
 
     @proxy = options.proxy
 
@@ -110,18 +107,20 @@ class HttpParser extends Mixin
       requestOpts.rejectUnauthorized = options.rejectUnauthorized
     requestOpts.agent = options.agent if options.agent?
 
-    @filterManager = options.filter ? globalFilterManager
-    @filterManager.applyOptionFilter options, requestOpts
+    do =>
+      filterManager = options.filter ? globalFilterManager
+      @filterWorker = filterManager.getFilterWorker()
+      @filterWorker.applyOptionFilter options, requestOpts
 
     # remove headers with undefined keys and values
     for headerName, headerValue of headers
       delete headers[headerName] unless headerValue?
 
   filterRequest: (request, callback) ->
-    @filterManager.applyRequestFilter request, callback
+    @filterWorker.applyRequestFilter request, callback
 
   filterResponse: (response, callback) ->
-    @filterManager.applyResponseFilter response, callback
+    @filterWorker.applyResponseFilter response, callback
 
   listenRequestEvent: (request) ->
     requestTimeout = false
@@ -149,7 +148,7 @@ class HttpRequest
   getInputStream: -> @request.stream
 
   initRequest: (request) ->
-    request.client = this
+    request.getClient = => this
     request.stream = new PassThrough
 
     # request Mode is normal, write body into stream

@@ -61,10 +61,10 @@ describe 'http ext', ->
         JSON.parse(body).should.eql {opt: 'hello'}
         done()
 
-    # it 'get with redirect', (done) ->
-    #   request.get 'http://localhost:8080/redirect', (err, {body}) ->
-    #     body.should.eql 'Index'
-    #     done()
+    it 'get with redirect', (done) ->
+      request.get 'http://localhost:8080/redirect', (err, {body}) ->
+        body.should.eql 'Index'
+        done()
     #
     it 'get with responseModel is stream', (done) ->
       request.get 'http://localhost:8080/', {responseMode: 'stream'}, (err, res) ->
