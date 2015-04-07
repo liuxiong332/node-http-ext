@@ -5,7 +5,6 @@ http = require 'http'
 assert = require 'should'
 util = require 'util'
 bodyParser = require 'body-parser'
-q = require 'q'
 
 describe 'http ext', ->
   server = null
@@ -86,27 +85,3 @@ describe 'http ext', ->
         JSON.parse(body).should.eql {opt: 'hello'}
         done()
       req.end JSON.stringify({opt: 'hello'})
-
-    it 'test http benchmark', (done) ->
-      begin = Date.now()
-      promises = [1..100].map ->
-        defer = q.defer()
-        http.get 'http://localhost:8080/', (res) ->
-          defer.resolve()
-        defer.promise
-      q.all(promises).then ->
-        end = Date.now()
-        util.log "http spend #{end - begin}ms"
-        done()
-
-    it 'test request benchmark', (done) ->
-      begin = Date.now()
-      promises = [1..100].map ->
-        defer = q.defer()
-        request.get 'http://localhost:8080/', ->
-          defer.resolve()
-        defer.promise
-      q.all(promises).then ->
-        end = Date.now()
-        util.log "request spend #{end - begin}ms"
-        done()
