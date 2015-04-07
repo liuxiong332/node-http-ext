@@ -23,6 +23,11 @@ class HttpParser extends Mixin
     @callback = callback
 
   requestResponse: (res) =>
+    isEnd = false
+    res.on 'end', (err) -> isEnd = true
+    res.on 'close', => @callback? new Error('Request aborted!') unless isEnd
+    res.on 'error', (err) => @callback? err
+
     res.client = this
     res.stream = new PassThrough
     res.pipe res.stream
@@ -30,32 +35,19 @@ class HttpParser extends Mixin
     @filterResponse res, @operateResponse.bind(this)
 
   operateResponse: (res, resError) ->
-    return @callback? res if @responseMode is 'stream'
-    chunks = []
-    isEnd = false
+    if resError?
+      if resError instanceof RetryError
+        return @sendRequest()
+      else
+        return @callback? resError
+    return @callback?(null, res) if @responseMode is 'stream'
 
+    chunks = []
     res.stream.on 'data', (chunk) ->
       chunks.push chunk
-
     res.stream.on 'end', (err) =>
-      isEnd = true
-      if resError?
-        if resError instanceof RetryError
-          @sendRequest()
-        else
-          @callback? resError
-      else if res.headers.location and @allowRedirects
-        if @redirectCount++ < @maxRedirects
-          @processUrl url.resolve(@url, res.headers.location)
-          @sendRequest()
-        else
-          @callback? new Error("Too many redirects (>#{@maxRedirects})")
-      else
-        responseBody = Buffer.concat chunks
-        @callback? null, {res, body: responseBody.toString('utf8')}
-
-    res.on 'close', =>
-      @callback? new Error('Request aborted!') unless isEnd
+      responseBody = Buffer.concat chunks
+      @callback? null, {res, body: responseBody.toString('utf8')}
 
   processUrl: (requestUrl) ->
     @url = requestUrl
@@ -71,6 +63,8 @@ class HttpParser extends Mixin
 
   processOpts: (options) ->
     @responseMode = options.responseMode ? 'normal'
+    @requestMode = options.requestMode
+
     @allowRedirects = options.allowRedirects isnt false
     if @allowRedirects
       @maxRedirects = options.maxRedirects ? 10
@@ -141,26 +135,23 @@ class HttpRequest
     @sendRequest()
 
   sendRequest: ->
-    request = new http.ClientRequest @requestOpts, @requestResponse
+    @request = request = new http.ClientRequest @requestOpts, @requestResponse
+    @initRequest request
+
+  getInputStream: -> @request.stream
+
+  initRequest: (request) ->
     request.client = this
     request.stream = new PassThrough
-    request.stream.write @body if @body?
+
+    # request Mode is normal, write body into stream
+    unless @requestMode is 'stream'
+      request.stream.write @body if @body?
+      request.stream.end()
 
     @listenRequestEvent request
-    @filterRequest request, =>
+    @filterRequest request, ->
       request.stream.pipe request
-      # request.write @body if @body?
-      # request.end()
-
-class HttpStreamRequest extends http.ClientRequest
-  HttpParser.includeInto this
-
-  constructor: (options, callback) ->
-    HttpParser.apply this, arguments
-    @processOpts options
-    super @requestOpts, @requestResponse
-    @listenRequestEvent this
-    @filterRequest this
 
 ['get', 'post', 'delete', 'put'].forEach (method) ->
   exports[method] = (url, options = {}, callback) ->
@@ -169,7 +160,7 @@ class HttpStreamRequest extends http.ClientRequest
       options = {}
     options.url = url
     options.method = method.toUpperCase()
+
+    client = new HttpRequest options, callback
     if options.requestMode is 'stream'
-      new HttpStreamRequest options, callback
-    else
-      new HttpRequest options, callback
+      client.getInputStream()
