@@ -29,7 +29,7 @@ describe 'http ext', ->
   afterEach (done) ->
     server.close -> done()
 
-  describe.skip 'HttpRequest', ->
+  describe 'HttpRequest', ->
 
     it 'should request index content', (done) ->
       request.get 'http://localhost:8080/', (err, {res, body}) ->
