@@ -1,11 +1,11 @@
 {
   "name": "http-ext",
   "description": "the http request client for nodejs module",
-  "version": "0.1.1",
+  "version": "0.2.3",
   "homepage": "https://github.com/liuxiong332/node-http-ext",
   "bugs": "https://github.com/liuxiong332/node-http-request/issues",
   "license": "MIT",
-  "main": "dist/lib/node-http-request.js",
+  "main": "dist/lib/http-request.js",
   "author": {
     "name": "liuxiong",
     "email": "liuxiong332@163.com"
@@ -14,7 +14,13 @@
     "type": "git",
     "url": "https://github.com/liuxiong332/node-http-ext"
   },
-  "keywords": [],
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "http",
+    "https"
+  ],
   "dependencies": {
     "mixto": "^1.0.0",
     "underscore": "^1.8.3"
@@ -23,6 +29,7 @@
     "body-parser": "^1.12.2",
     "coffee-script": "^1.9.1",
     "coveralls": "^2.11.1",
+    "del": "^1.1.1",
     "express": "^4.12.3",
     "gulp": "^3.8.8",
     "gulp-bump": "^0.1.11",
@@ -38,6 +45,7 @@
   },
   "scripts": {
     "coveralls": "gulp test && cat coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js",
-    "test": "gulp test"
+    "test": "gulp test",
+    "prepublish": "gulp dist"
   }
 }
