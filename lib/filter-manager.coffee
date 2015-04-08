@@ -2,7 +2,11 @@ _ = require 'underscore'
 
 class FilterWorker
   constructor: (filterConstructors) ->
-    @_handlers = filterConstructors.map (constructor) -> new constructor
+    @_handlers = filterConstructors.map (handler) ->
+      if _.isArray handler
+        new handler[0](handler[1..])
+      else
+        new handler
 
   getFilters: -> @_handlers
 
