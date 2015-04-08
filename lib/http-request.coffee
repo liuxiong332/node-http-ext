@@ -77,7 +77,13 @@ class HttpParser extends Mixin
 
     @proxy = options.proxy
 
-    @requestOpts = requestOpts = {method: options.method}
+    pickOptionList = [
+      'agent', 'method', 'auth', 'keepAlive', 'keepAliveMsecs'
+      'pfx', 'key', 'passphrase', 'cert', 'ca', 'ciphers'
+      'rejectUnauthorized', 'secureProtocol'
+    ]
+
+    @requestOpts = requestOpts = _.pick options, pickOptionList
     @parseUrl options.url
     requestOpts._defaultAgent = https.globalAgent if @isHttps
 
@@ -102,10 +108,6 @@ class HttpParser extends Mixin
     headers['Content-Type'] = contentType if contentType?
     headers['Cookie'] = options.cookies.join "; " if options.cookies?
     _.extend headers, options.headers
-
-    if @isHttps and options.rejectUnauthorized?
-      requestOpts.rejectUnauthorized = options.rejectUnauthorized
-    requestOpts.agent = options.agent if options.agent?
 
     do =>
       filterManager = options.filter ? globalFilterManager
