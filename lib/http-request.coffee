@@ -17,7 +17,7 @@ Mixin = require 'mixto'
 RedirectFilter = require './redirect-filter'
 
 exports.FilterManager = require './filter-manager'
-exports.RetryError = RetryError;
+exports.RetryError = RetryError
 
 exports.globalFilterManager = globalFilterManager =
   new exports.FilterManager RedirectFilter

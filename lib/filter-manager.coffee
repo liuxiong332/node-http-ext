@@ -34,9 +34,9 @@ class FilterWorker
     filter = (err) -> defFilter(res, err) if defFilter?
     @_applyFilter 'filterResponse', filter, res
 
-  applyOptionFilter: (option, requestOpts, defFilter) ->
-    filter = -> defFilter(option, requestOpts) if defFilter?
-    @_applyFilter 'filterOption', filter, option, requestOpts
+  applyOptionFilter: (option, requestOpts) ->
+    for handler in @_handlers
+      handler.filterOption option, requestOpts if handler.filterOption?
 
 module.exports =
 class FilterManager
