@@ -3,10 +3,9 @@ _ = require 'underscore'
 class FilterWorker
   constructor: (filterConstructors) ->
     @_handlers = filterConstructors.map (handler) ->
-      if _.isArray handler
-        new handler[0](handler[1..])
-      else
-        new handler
+      filter = new handler[0](handler[2..])
+      filter.setManagerScope? handler[1]
+      filter
 
   getFilters: -> @_handlers
 
@@ -48,4 +47,10 @@ class FilterManager
     new FilterWorker @_handlers
 
   use: (filters...) ->
-    @_handlers = @_handlers.concat filters
+    @_handlers = @_handlers.concat filters.map (filter) ->
+      # add managerScope for each filter
+      if _.isArray filter
+        filter.splice 1, 0, {}
+        filter
+      else
+        [filter, {}]
