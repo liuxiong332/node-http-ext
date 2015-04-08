@@ -80,7 +80,7 @@ class HttpParser extends Mixin
     @proxy = options.proxy
 
     pickOptionList = [
-      'agent', 'method', 'auth', 'keepAlive', 'keepAliveMsecs'
+      'agent', 'method', 'auth'
       'pfx', 'key', 'passphrase', 'cert', 'ca', 'ciphers'
       'rejectUnauthorized', 'secureProtocol'
     ]
