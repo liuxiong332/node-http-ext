@@ -63,11 +63,12 @@ class HttpParser extends Mixin
 
   parseUrl: (requestUrl) ->
     @url = requestUrl
+    reqUrl = url.parse requestUrl
     if @proxy?
       [port, host, path] = [@proxy.port, @proxy.host, requestUrl]
+      @requestOpts.headers['HOST'] = reqUrl.hostname
       @isHttps = true if @proxy.protocol is 'https'
     else
-      reqUrl = url.parse requestUrl
       @isHttps = reqUrl.protocol is 'https:'
       [host, path] = [reqUrl.hostname, reqUrl.path]
       port = reqUrl.port ? if @isHttps then 443 else 80
@@ -86,6 +87,8 @@ class HttpParser extends Mixin
     ]
 
     @requestOpts = requestOpts = _.pick options, pickOptionList
+    headers = requestOpts.headers = {}
+
     @parseUrl options.url
     requestOpts._defaultAgent = https.globalAgent if @isHttps
 
@@ -105,7 +108,6 @@ class HttpParser extends Mixin
       @body = new Buffer options.body, 'utf8'
       contentType = null
 
-    requestOpts.headers = headers = {}
     headers['Content-Length'] = @body.length if @body?
     headers['Content-Type'] = contentType if contentType?
     headers['Cookie'] = options.cookies.join "; " if options.cookies?
@@ -116,9 +118,15 @@ class HttpParser extends Mixin
       @filterWorker = filterManager.getFilterWorker()
       @filterWorker.applyOptionFilter options, requestOpts
 
+    @simplifyRequestOptions()
+
+  simplifyRequestOptions: ->
     # remove headers with undefined keys and values
+    headers = @requestOpts.headers
     for headerName, headerValue of headers
       delete headers[headerName] unless headerValue?
+
+  getRequestOptions: -> @requestOpts
 
   filterRequest: (request, callback) ->
     @filterWorker.applyRequestFilter request, callback
