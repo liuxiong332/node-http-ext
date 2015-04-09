@@ -61,6 +61,8 @@ class HttpParser extends Mixin
       responseBody = Buffer.concat chunks
       @callback? null, {res, body: responseBody.toString('utf8')}
 
+  getUrl: -> @url
+
   parseUrl: (requestUrl) ->
     @url = requestUrl
     reqUrl = url.parse requestUrl
@@ -108,7 +110,6 @@ class HttpParser extends Mixin
       @body = new Buffer options.body, 'utf8'
       contentType = null
 
-    headers['Content-Length'] = @body.length if @body?
     headers['Content-Type'] = contentType if contentType?
     headers['Cookie'] = options.cookies.join "; " if options.cookies?
     _.extend headers, options.headers
@@ -154,6 +155,7 @@ class HttpRequest
     @sendRequest()
 
   sendRequest: ->
+    @filterWorker.applyRequestOptionFilter @requestOpts
     @request = request = new http.ClientRequest @requestOpts, @requestResponse
     @initRequest request
 
@@ -172,7 +174,8 @@ class HttpRequest
         request.stream.end()
 
     @listenRequestEvent request
-    @filterRequest request, ->
+    @filterRequest request, (req, err) ->
+      throw err if err?
       request.stream.pipe request
 
 ['get', 'post', 'delete', 'put'].forEach (method) ->

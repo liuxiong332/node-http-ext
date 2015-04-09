@@ -1,9 +1,9 @@
 _ = require 'underscore'
 
 class FilterWorker
-  constructor: (filterConstructors) ->
+  constructor: (client, filterConstructors) ->
     @_handlers = filterConstructors.map (handler) ->
-      filter = new handler[0](handler[2..])
+      filter = new handler[0](client, handler[2..])
       filter.setManagerScope? handler[1]
       filter
 
@@ -37,14 +37,18 @@ class FilterWorker
     for handler in @_handlers
       handler.filterOption option, requestOpts if handler.filterOption?
 
+  applyRequestOptionFilter: (requestOpts) ->
+    for handler in @_handlers
+      handler.filterRequestOption requestOpts if handler.filterRequestOption?
+
 module.exports =
 class FilterManager
   constructor: (filters...) ->
     @_handlers = []
     @use filters...
 
-  getFilterWorker: ->
-    new FilterWorker @_handlers
+  getFilterWorker: (client) ->
+    new FilterWorker client, @_handlers
 
   use: (filters...) ->
     @_handlers = @_handlers.concat filters.map (filter) ->

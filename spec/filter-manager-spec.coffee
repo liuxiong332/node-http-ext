@@ -12,7 +12,7 @@ describe 'filter manager', ->
 
   it 'should use and apply filter handler', ->
     manager = new FilterManager(Filter)
-    filterWorker = manager.getFilterWorker()
+    filterWorker = manager.getFilterWorker(null)
     filterWorker.getFilters().length.should.equal 1
     filter = filterWorker.getFilters()[0]
     sinon.spy filter, 'filterRequest'
