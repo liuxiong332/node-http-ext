@@ -40,14 +40,18 @@ class HttpParser extends Mixin
     @filterResponse res, @operateResponse.bind(this)
 
   operateResponse: (res, resError) ->
-    if resError instanceof RetryError
-      if @requestMode is 'stream'
-        @sendRequest()
-        @callback? resError, @getInputStream()
-      else
-        @sendRequest()
-    else if resError?
-      @callback? resError
+    if resError?
+      res.on 'end', =>
+        if resError instanceof RetryError
+          if @requestMode is 'stream'
+            process.nextTick =>
+              @sendRequest()
+              @callback? resError, @getInputStream()
+          else
+            process.nextTick =>
+              @sendRequest()
+        else
+          @callback? resError
     else if @responseMode is 'stream'
       @callback? null, res
     else
