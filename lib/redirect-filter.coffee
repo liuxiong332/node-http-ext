@@ -3,8 +3,11 @@ url = require 'url'
 
 module.exports =
 class RedirectFilter
-  constructor: (client) ->
-    @originUrl = client.getUrl()
+  constructor: (@client) ->
+    @originUrl = @client.getUrl()
+
+  setManagerScope: (@scope) ->
+    @scope.redirectMap ?= {}
 
   filterOption: (option, requestOpts) ->
     @allowRedirects = option.allowRedirects isnt false
@@ -12,11 +15,18 @@ class RedirectFilter
       @maxRedirects = option.maxRedirects ? 10
       @redirectCount = 0
 
+  filterRequestOption: (requestOpts) ->
+    requestUrl = @client.getUrl()
+    redirectUrl = @scope.redirectMap[requestUrl]
+    @client.parseUrl redirectUrl if redirectUrl
+
   filterResponse: (res, next) ->
-    if res.headers.location and @allowRedirects
+    newUrl = res.headers.location
+    if newUrl and @allowRedirects
       if @redirectCount++ < @maxRedirects
-        client = res.getClient()
-        client.parseUrl url.resolve(client.url, res.headers.location)
+        newUrl = url.resolve(@client.getUrl(), newUrl)
+        @client.parseUrl newUrl
+        @scope.redirectMap[@originUrl] = newUrl
         throw new RetryError
       else
         throw new Error("Too many redirects (>#{@maxRedirects})")
