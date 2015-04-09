@@ -4,7 +4,7 @@ url = require 'url'
 module.exports =
 class RedirectFilter
   constructor: (client) ->
-    @originUrl = client?.getUrl()
+    @originUrl = client.getUrl()
 
   filterOption: (option, requestOpts) ->
     @allowRedirects = option.allowRedirects isnt false

@@ -116,7 +116,7 @@ class HttpParser extends Mixin
 
     do =>
       filterManager = options.filter ? globalFilterManager
-      @filterWorker = filterManager.getFilterWorker()
+      @filterWorker = filterManager.getFilterWorker(this)
       @filterWorker.applyOptionFilter options, requestOpts
 
     @simplifyRequestOptions()
