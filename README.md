@@ -179,14 +179,14 @@ var httpExt = require('http-ext');
 
 httpExt.post('http://posttestserver.com/post.php',{
   body: '<?xml version="1.0" encoding="UTF-8"?>',
-  headers:{
+  headers: {
     'Content-Type': 'text/xml',
   }},
   function (err, res) {
     if (err){
-        console.log(err);
-    }else{
-        console.log(res.body);
+      console.log(err);
+    } else {
+      console.log(res.body);
     }
   }
 );

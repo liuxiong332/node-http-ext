@@ -193,3 +193,5 @@ class HttpRequest
     client = new HttpRequest options, callback
     if options.requestMode is 'stream'
       client.getInputStream()
+
+exports.HttpRequest = HttpRequest
