@@ -34,7 +34,7 @@ class HttpParser extends Mixin
 
     res.getClient = => this
     res.stream = new PassThrough
-    res.getOutStream = -> this.stream
+    res.getOutStream = => this.stream
     res.pipe res.stream
 
     @filterResponse res, @operateResponse.bind(this)
@@ -146,7 +146,7 @@ class HttpParser extends Mixin
         requestTimeout = true
         request.abort()
 
-    request.on 'error', (err) ->
+    request.on 'error', (err) =>
       err = new Error('request timeout') if requestTimeout
       @callback? err
 
@@ -168,6 +168,7 @@ class HttpRequest
   initRequest: (request) ->
     request.getClient = => this
     request.stream = new PassThrough
+    @listenRequestEvent request
 
     # request Mode is normal, write body into stream
     unless @requestMode is 'stream'
@@ -177,7 +178,6 @@ class HttpRequest
         request.stream.write @body if @body?
         request.stream.end()
 
-    @listenRequestEvent request
     @filterRequest request, (req, err) ->
       throw err if err?
       request.stream.pipe request
