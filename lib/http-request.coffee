@@ -110,8 +110,11 @@ class HttpParser extends Mixin
       @body = new Buffer JSON.stringify(options.json), 'utf8'
       contentType = 'application/json'
 
-    if options.body
-      @body = new Buffer options.body, 'utf8'
+    if (rawBody = options.body)?
+      if Buffer.isBuffer(rawBody)
+        @body = rawBody
+      else
+        @body = new Buffer rawBody, options.encoding ? 'utf8'
       contentType = null
 
     headers['Content-Type'] = contentType if contentType?
