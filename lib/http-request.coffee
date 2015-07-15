@@ -67,17 +67,33 @@ class HttpParser extends Mixin
 
   getUrl: -> @url
 
-  parseUrl: (requestUrl) ->
-    @url = requestUrl
-    reqUrl = url.parse requestUrl
+  _getUrlParams: (options) ->
+    if @url
+      params = url.parse @url
+    else
+      params =
+        protocol: options.protocol ? 'http'
+        hostname: options.host ? 'localhost'
+        port: options.port, pathname: options.path ? '/'
+      @url = url.format params
+    params
+
+  _parseUrlOptions: (options) ->
+    @url = options.url
+    @_parseUrlByParams @_getUrlParams(options)
+
+  parseUrl: (@url) ->
+    @_parseUrlByParams url.parse(@url)
+
+  _parseUrlByParams: (params) ->
     if @proxy?
       [port, host, path] = [@proxy.port, @proxy.host, requestUrl]
-      @requestOpts.headers['HOST'] = reqUrl.hostname
+      @requestOpts.headers['HOST'] = params.hostname
       @isHttps = true if @proxy.protocol is 'https'
     else
-      @isHttps = reqUrl.protocol is 'https:'
-      [host, path] = [reqUrl.hostname, reqUrl.path]
-      port = reqUrl.port ? if @isHttps then 443 else 80
+      @isHttps = params.protocol is 'https:'
+      [host, path] = [params.hostname, params.path]
+      port = params.port ? if @isHttps then 443 else 80
     _.extend @requestOpts, {port, host, path}
 
   processOpts: (options) ->
@@ -95,7 +111,8 @@ class HttpParser extends Mixin
     @requestOpts = requestOpts = _.pick options, pickOptionList
     headers = requestOpts.headers = {}
 
-    @parseUrl options.url
+    @_parseUrlOptions options
+
     requestOpts._defaultAgent = https.globalAgent if @isHttps
 
     if options.parameters
@@ -187,6 +204,10 @@ class HttpRequest
 
 ['get', 'post', 'delete', 'put'].forEach (method) ->
   exports[method] = (url, options = {}, callback) ->
+    if typeof url isnt 'string'
+      callback = options
+      options = url
+      url = null
     if typeof options is 'function'
       callback = options
       options = {}

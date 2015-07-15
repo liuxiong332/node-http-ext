@@ -29,6 +29,11 @@ describe 'http ext', ->
     server.close -> done()
 
   describe 'HttpRequest', ->
+    it 'should request without url', (done) ->
+      options = {host: 'localhost', port: 8080, path: '/'}
+      request.get options, (err, {res, body}) ->
+        body.should.eql 'Index'
+        done()
 
     it 'should request index content', (done) ->
       request.get 'http://localhost:8080/', (err, {res, body}) ->
