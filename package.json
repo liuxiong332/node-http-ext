@@ -1,11 +1,11 @@
 {
   "name": "http-ext",
   "description": "the http request client for nodejs module",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "homepage": "https://github.com/liuxiong332/node-http-ext",
   "bugs": "https://github.com/liuxiong332/node-http-request/issues",
   "license": "MIT",
-  "main": "dist/lib/http-request.js",
+  "main": "dist/http-request.js",
   "author": {
     "name": "liuxiong",
     "email": "liuxiong332@163.com"
