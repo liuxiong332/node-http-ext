@@ -14,7 +14,9 @@ class FilterWorker
     handlers = @_handlers
     length = handlers.length
     curIndex = 0
+    isFinish = false
     next = ->
+      return if isFinish
       ++curIndex while curIndex < length and not handlers[curIndex][method]?
       if curIndex >= length
         return defFilter()
@@ -22,7 +24,11 @@ class FilterWorker
       try
         h[method].apply h, args.concat(next)
       catch err
+        isFinish = true
         defFilter err
+    next.retry = ->
+      isFinish = true
+      defFilter new RetryError()
     next()
 
   applyRequestFilter: (req, defFilter) ->
