@@ -67,15 +67,16 @@ describe 'http ext', ->
 
     it 'get with redirect', (done) ->
       request.get 'http://localhost:8080/redirect', (err, {body}) ->
+        done(err) if err
         body.should.eql 'Index'
         done()
-    #
-    it 'get with responseModel is stream', (done) ->
-      request.get 'http://localhost:8080/', {responseMode: 'stream'}, (err, res) ->
-        res.on 'data', (data) -> data.toString('utf8').should.eql 'Index'
-        res.on 'end', -> done()
 
-  describe 'HttpStreamRequest', ->
+    # it 'get with responseModel is stream', (done) ->
+    #   request.get 'http://localhost:8080/', {responseMode: 'stream'}, (err, res) ->
+    #     res.on 'data', (data) -> data.toString('utf8').should.eql 'Index'
+    #     res.on 'end', -> done()
+
+  describe.skip 'HttpStreamRequest', ->
 
     it 'get index', (done) ->
       reqUrl = 'http://localhost:8080/'

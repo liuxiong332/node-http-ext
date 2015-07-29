@@ -33,35 +33,21 @@ class HttpParser extends Mixin
     res.on 'error', (err) => @callback? err
 
     res.getClient = => this
-    res.stream = new PassThrough
-    res.getOutStream = => this.stream
-    res.pipe res.stream
-
     @filterResponse res, @operateResponse.bind(this)
 
   operateResponse: (res, resError) ->
-    if resError?
-      res.on 'end', =>
-        if resError instanceof RetryError
-          if @requestMode is 'stream'
-            process.nextTick =>
-              @sendRequest()
-              @callback? resError, @getInputStream()
-          else
-            process.nextTick =>
-              @sendRequest()
-        else
-          @callback? resError
-    else if @responseMode is 'stream'
-      @callback? null, res
-    else
+    unless resError?
       @parseBody res
+    else if resError instanceof RetryError
+      process.nextTick => @sendRequest()
+    else
+      @callback? resError
 
   parseBody: (res) ->
     chunks = []
-    res.stream.on 'data', (chunk) ->
+    res.on 'data', (chunk) ->
       chunks.push chunk
-    res.stream.on 'end', (err) =>
+    res.on 'end', (err) =>
       responseBody = Buffer.concat chunks
       @callback? null, {res, body: responseBody.toString('utf8')}
 
@@ -97,9 +83,6 @@ class HttpParser extends Mixin
     _.extend @requestOpts, {port, host, path}
 
   processOpts: (options) ->
-    @responseMode = options.responseMode
-    @requestMode = options.requestMode
-
     @proxy = options.proxy
 
     pickOptionList = [
@@ -113,10 +96,11 @@ class HttpParser extends Mixin
 
     @_parseUrlOptions options
 
-    requestOpts._defaultAgent = https.globalAgent if @isHttps
+    # requestOpts._defaultAgent = https.globalAgent if @isHttps
 
     if options.parameters
       params = query.stringify options.parameters
+
       if options.method is 'GET'
         @requestOpts.path += "?#{params}"
       else
@@ -180,27 +164,20 @@ class HttpRequest
 
   sendRequest: ->
     @filterWorker.applyRequestOptionFilter @requestOpts
-    @request = request = new http.ClientRequest @requestOpts, @requestResponse
-    @initRequest request
-
-  getInputStream: -> @request.stream
+    if @isHttps
+      @request = https.request @requestOpts, @requestResponse
+    else
+      @request = http.request @requestOpts, @requestResponse
+    @initRequest @request
 
   initRequest: (request) ->
     request.getClient = => this
-    request.stream = new PassThrough
     @listenRequestEvent request
 
-    # request Mode is normal, write body into stream
-    unless @requestMode is 'stream'
-      if @bodyStream?
-        @bodyStream.pipe request.stream
-      else
-        request.stream.write @body if @body?
-        request.stream.end()
-
-    @filterRequest request, (req, err) ->
+    @filterRequest request, (req, err) =>
       throw err if err?
-      request.stream.pipe request
+      request.write @body if @body?
+      request.end()
 
 ['get', 'post', 'delete', 'put'].forEach (method) ->
   exports[method] = (url, options = {}, callback) ->
