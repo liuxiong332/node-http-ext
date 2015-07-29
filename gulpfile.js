@@ -53,7 +53,7 @@ gulp.task('clean:dist', function(cb) {
 });
 
 gulp.task('dist', ['clean:dist'], function () {
-  return gulp.src(paths.coffee, {base: '.'})
+  return gulp.src(paths.coffee, {base: './lib'})
     .pipe(plugins.coffee({bare: true})).on('error', plugins.util.log)
     .pipe(gulp.dest('./dist'));
 });
