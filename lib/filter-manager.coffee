@@ -1,4 +1,5 @@
 _ = require 'underscore'
+{RetryError} = require './http-error'
 
 class FilterWorker
   constructor: (client, filterConstructors) ->
