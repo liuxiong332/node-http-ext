@@ -39,7 +39,10 @@ class HttpParser extends Mixin
     unless resError?
       @parseBody res
     else if resError instanceof RetryError
-      process.nextTick => @sendRequest()
+      res.on 'data', ->
+      res.on 'end', =>
+        process.nextTick =>
+          @sendRequest()
     else
       @callback? resError
 
@@ -47,7 +50,7 @@ class HttpParser extends Mixin
     chunks = []
     res.on 'data', (chunk) ->
       chunks.push chunk
-    res.on 'end', (err) =>
+    res.on 'end', =>
       responseBody = Buffer.concat chunks
       @callback? null, {res, body: responseBody.toString('utf8')}
 
@@ -73,7 +76,7 @@ class HttpParser extends Mixin
 
   _parseUrlByParams: (params) ->
     if @proxy?
-      [port, host, path] = [@proxy.port, @proxy.host, requestUrl]
+      [port, host, path] = [@proxy.port, @proxy.host, @url]
       @requestOpts.headers['HOST'] = params.hostname
       @isHttps = true if @proxy.protocol is 'https'
     else
@@ -191,8 +194,6 @@ class HttpRequest
     options.url = url
     options.method = method.toUpperCase()
 
-    client = new HttpRequest options, callback
-    if options.requestMode is 'stream'
-      client.getInputStream()
+    new HttpRequest options, callback
 
 exports.HttpRequest = HttpRequest
